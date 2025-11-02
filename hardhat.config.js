@@ -1,14 +1,13 @@
-require("@nomicfoundation/hardhat-toolbox");
+require("@nomiclabs/hardhat-ethers");
+require("@nomiclabs/hardhat-waffle");
 
 module.exports = {
-  solidity: {
-    version: "0.8.20",
-    settings: {
-      optimizer: {
-        enabled: true,
-        runs: 200,
-      },
+  solidity: "0.8.17",
+  networks: {
+    hardhat: {},
+    sepolia: {
+      url: process.env.SEPOLIA_RPC || "",
+      accounts: process.env.PRIVATE_KEY ? [process.env.PRIVATE_KEY] : [],
     },
   },
 };
-
