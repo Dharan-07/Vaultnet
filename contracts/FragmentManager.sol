@@ -1,57 +1,41 @@
 // SPDX-License-Identifier: MIT
-pragma solidity ^0.8.20;
+pragma solidity ^0.8.17;
 
 import "@openzeppelin/contracts/access/Ownable.sol";
-import "./FragmentCollectible.sol";
-import "./CompleteCollectible.sol";
-import "./VaultToken.sol";
+import "@openzeppelin/contracts/token/ERC20/IERC20.sol";
+
+interface IFragmentCollectible {
+    function mintTo(address to, string memory tokenURI) external returns (uint256);
+}
+
+interface ICompleteCollectible {
+    function mintTo(address to, string memory tokenURI) external returns (uint256);
+}
 
 contract FragmentManager is Ownable {
-    FragmentCollectible public fragment;
-    CompleteCollectible public complete;
-    VaultToken public token;
+    IFragmentCollectible public fragment;
+    ICompleteCollectible public complete;
+    IERC20 public vaultToken;
 
-    struct Template {
-        string finalURI;
-        string[] fragmentURIs;
-        bool exists;
+    event FragmentMinted(address indexed to, uint256 id, string uri);
+    event CompleteMinted(address indexed to, uint256 id, string uri);
+
+    constructor(address fragmentAddr, address completeAddr, address tokenAddr, address initialOwner) {
+        fragment = IFragmentCollectible(fragmentAddr);
+        complete = ICompleteCollectible(completeAddr);
+        vaultToken = IERC20(tokenAddr);
+        transferOwnership(initialOwner);
     }
 
-    mapping(uint256 => Template) public templates;
-    uint256 public nextTemplateId;
-
-    mapping(address => mapping(uint256 => uint256)) public fragmentsCollected;
-
-    constructor(address fragmentAddr, address completeAddr, address tokenAddr, address initialOwner)
-    Ownable(initialOwner)
-{
-    fragment = FragmentCollectible(fragmentAddr);
-    complete = CompleteCollectible(completeAddr);
-    token = VaultToken(tokenAddr);
-}
-
-
-    function createTemplate(string memory finalURI, string[] memory fragmentURIs)
-        external
-        onlyOwner
-        returns (uint256)
-    {
-        templates[nextTemplateId] = Template(finalURI, fragmentURIs, true);
-        return nextTemplateId++;
+    function rewardFragment(address to, string memory tokenURI) external onlyOwner returns (uint256) {
+        uint256 id = fragment.mintTo(to, tokenURI);
+        emit FragmentMinted(to, id, tokenURI);
+        return id;
     }
 
-    function rewardFragment(address user, uint256 templateId) external onlyOwner {
-        Template storage t = templates[templateId];
-        require(t.exists, "Template missing");
-        uint256 nextIndex = fragmentsCollected[user][templateId];
-        require(nextIndex < t.fragmentURIs.length, "Complete");
-
-        fragment.mint(user, t.fragmentURIs[nextIndex]);
-        fragmentsCollected[user][templateId]++;
-
-        if (fragmentsCollected[user][templateId] == t.fragmentURIs.length) {
-            complete.mint(user, t.finalURI);
-        }
+    function rewardComplete(address to, string memory tokenURI) external onlyOwner returns (uint256) {
+        uint256 id = complete.mintTo(to, tokenURI);
+        emit CompleteMinted(to, id, tokenURI);
+        return id;
     }
 }
-

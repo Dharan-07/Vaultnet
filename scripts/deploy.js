@@ -1,7 +1,8 @@
-// deploy.js
 const hre = require("hardhat");
 
 async function main() {
+  await hre.run('compile'); // ensure compiled
+
   const [deployer] = await hre.ethers.getSigners();
   console.log("Deployer:", deployer.address);
 
@@ -16,7 +17,11 @@ async function main() {
   const FragmentCollectible = await hre.ethers.getContractFactory("FragmentCollectible");
   const CompleteCollectible = await hre.ethers.getContractFactory("CompleteCollectible");
 
-  const baseUri = "https://example.com/metadata/#"; // change as needed
+  // Use an IPFS-style base URI by default (won't be interpreted as ENS)
+  // Replace the placeholder with your real base CID: e.g. ipfs://bafy.../
+  const baseUri = "ipfs://bafybeiexamplebaseuri/"; // <-- CHANGE THIS to your metadata base CID
+
+  // constructors expect (address initialOwner, string baseURI)
   const fragment = await FragmentCollectible.deploy(deployer.address, baseUri);
   await fragment.deployed();
   console.log("FragmentCollectible deployed:", fragment.address);
@@ -52,17 +57,17 @@ async function main() {
   await tx.wait();
   console.log("FragmentManager owner is now VaultNet.");
 
-  // OPTIONAL: Save addresses somewhere, or print them for manual use
-  console.log("Deployment complete. Addresses:");
+  // Print addresses for your records:
+  console.log("\n--- Deployed Contracts ---");
   console.log("VaultToken:", vaultToken.address);
   console.log("FragmentCollectible:", fragment.address);
   console.log("CompleteCollectible:", complete.address);
   console.log("FragmentManager:", fragmentManager.address);
   console.log("VaultNet:", vaultNet.address);
+  console.log("--------------------------");
 }
 
 main().catch((error) => {
   console.error(error);
   process.exitCode = 1;
 });
-
