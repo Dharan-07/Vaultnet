@@ -1,193 +1,85 @@
 // SPDX-License-Identifier: MIT
-pragma solidity ^0.8.19;
+pragma solidity ^0.8.17;
 
-/**
- * @title VaultNet
- * @dev A decentralized repository for storing, buying, and updating AI models with IPFS integration.
- *      Models are identified by their IPFS CID and include version control.
- */
-contract VaultNet {
-    struct Model {
-        string name;
-        string description;
-        string ipfsHash; // IPFS CID
-        uint256 price;
-        address owner;
-        uint256 version;
-        uint256[] versionHistory;
-    }
+import "@openzeppelin/contracts/access/Ownable.sol";
+import "@openzeppelin/contracts/security/ReentrancyGuard.sol";
+import "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 
-    uint256 public modelCounter;
-    mapping(uint256 => Model) public models;
-    mapping(address => mapping(uint256 => bool)) public hasAccess;
-
-    // ----------------- EVENTS -----------------
-    event ModelUploaded(uint256 indexed modelId, address indexed owner, string name, uint256 price, string ipfsHash);
-    event ModelPurchased(uint256 indexed modelId, address indexed buyer);
-    event ModelUpdated(uint256 indexed modelId, string newIpfsHash, uint256 newVersion);
-    event CIDStored(uint256 indexed modelId, string cid, address indexed storedBy);
-
-    // ----------------- MODIFIERS -----------------
-    modifier onlyOwner(uint256 modelId) {
-        require(models[modelId].owner == msg.sender, "Not the model owner");
-        _;
-    }
-
-    modifier modelExists(uint256 modelId) {
-        require(modelId < modelCounter, "Model does not exist");
-        _;
-    }
-
-    // ----------------- CORE FUNCTIONS -----------------
-
-    /**
-     * @notice Uploads a new model to VaultNet.
-     * @param name Model name
-     * @param description Short description of the model
-     * @param ipfsHash IPFS CID of the model
-     * @param price Price in wei
-     */
-    function uploadModel(
-        string memory name,
-        string memory description,
-        string memory ipfsHash,
-        uint256 price
-    ) public {
-        require(price > 0, "Price must be greater than 0");
-        require(bytes(ipfsHash).length > 0, "IPFS hash required");
-
-        Model storage newModel = models[modelCounter];
-        newModel.name = name;
-        newModel.description = description;
-        newModel.ipfsHash = ipfsHash;
-        newModel.price = price;
-        newModel.owner = msg.sender;
-        newModel.version = 1;
-        newModel.versionHistory.push(1);
-
-        emit ModelUploaded(modelCounter, msg.sender, name, price, ipfsHash);
-        modelCounter++;
-    }
-
-    /**
-     * @notice Allows a user to buy access to a model.
-     * @param modelId The ID of the model
-     */
-    function buyAccess(uint256 modelId) public payable modelExists(modelId) {
-        Model storage model = models[modelId];
-        require(msg.value >= model.price, "Insufficient payment");
-        require(!hasAccess[msg.sender][modelId], "Already purchased");
-
-        hasAccess[msg.sender][modelId] = true;
-        payable(model.owner).transfer(model.price);
-
-        emit ModelPurchased(modelId, msg.sender);
-    }
-
-    /**
-     * @notice Updates an existing model with a new version (new IPFS CID).
-     * @param modelId The ID of the model
-     * @param newIpfsHash The new IPFS CID
-     */
-    function updateModel(uint256 modelId, string memory newIpfsHash)
-        public
-        onlyOwner(modelId)
-        modelExists(modelId)
-    {
-        require(bytes(newIpfsHash).length > 0, "New IPFS hash required");
-
-        Model storage model = models[modelId];
-        model.version++;
-        model.ipfsHash = newIpfsHash;
-        model.versionHistory.push(model.version);
-
-        emit ModelUpdated(modelId, newIpfsHash, model.version);
-    }
-
-    // ----------------- IPFS UTILITY FUNCTIONS -----------------
-
-    /**
-     * @notice Store or update the CID for an existing model (used by external scripts).
-     * @param modelId ID of the model
-     * @param cid IPFS CID to store
-     */
-    function storeCID(uint256 modelId, string memory cid) public onlyOwner(modelId) modelExists(modelId) {
-        require(bytes(cid).length > 0, "CID cannot be empty");
-
-        models[modelId].ipfsHash = cid;
-        emit CIDStored(modelId, cid, msg.sender);
-    }
-
-    /**
-     * @notice Fetch the IPFS CID for a given model.
-     * @param modelId ID of the model
-     * @return cid IPFS hash string
-     */
-    function getModelCID(uint256 modelId) public view modelExists(modelId) returns (string memory cid) {
-        return models[modelId].ipfsHash;
-    }
-
-    // ----------------- VIEW FUNCTIONS -----------------
-
-    /**
-     * @notice Returns model details by ID.
-     */
-    function getModel(uint256 modelId)
-        public
-        view
-        modelExists(modelId)
-        returns (
-            string memory,
-            string memory,
-            string memory,
-            uint256,
-            address,
-            uint256
-        )
-    {
-        Model memory model = models[modelId];
-        return (
-            model.name,
-            model.description,
-            model.ipfsHash,
-            model.price,
-            model.owner,
-            model.version
-        );
-    }
-
-    /**
-     * @notice Checks if a user has purchased access to a specific model.
-     */
-    function checkAccess(uint256 modelId, address user) public view returns (bool) {
-        return hasAccess[user][modelId];
-    }
-
-    /**
-     * @notice Returns all version numbers of a specific model.
-     */
-    function getModelVersionHistory(uint256 modelId)
-        public
-        view
-        modelExists(modelId)
-        returns (uint256[] memory)
-    {
-        return models[modelId].versionHistory;
-    }
-
-    /**
-     * @notice Returns total number of models uploaded.
-     */
-    function getTotalModels() public view returns (uint256) {
-        return modelCounter;
-    }
-
-    /**
-     * @notice Returns the latest uploaded model ID.
-     */
-    function getLatestModelId() public view returns (uint256) {
-        require(modelCounter > 0, "No models exist");
-        return modelCounter - 1;
-    }
+interface IFragmentManager {
+    function rewardFragment(address to, string memory tokenURI) external returns (uint256);
 }
 
+contract VaultNet is Ownable, ReentrancyGuard {
+    struct Model {
+        address uploader;
+        string cid; // IPFS CID or metadata URI
+        uint256 price; // price in wei
+        uint256 version;
+        bool exists;
+    }
+
+    mapping(uint256 => Model) public models;
+    uint256 public modelCounter;
+
+    IERC20 public vaultToken;
+    IFragmentManager public fragmentManager;
+    uint256 public rewardTemplateId;
+
+    event ModelUploaded(uint256 indexed modelId, address indexed uploader, string cid, uint256 price);
+    event ModelPurchased(uint256 indexed modelId, address indexed buyer, uint256 price);
+    event ModelUpdated(uint256 indexed modelId, string newCid, uint256 newVersion);
+
+    constructor(address managerAddr, uint256 _rewardTemplateId, address initialOwner) {
+        fragmentManager = IFragmentManager(managerAddr);
+        rewardTemplateId = _rewardTemplateId;
+        transferOwnership(initialOwner);
+    }
+
+    modifier onlyUploader(uint256 modelId) {
+        require(models[modelId].uploader == msg.sender, "not uploader");
+        _;
+    }
+
+    function uploadModel(string memory cid, uint256 price) external returns (uint256) {
+        modelCounter++;
+        uint256 id = modelCounter;
+        models[id] = Model({uploader: msg.sender, cid: cid, price: price, version: 1, exists: true});
+        emit ModelUploaded(id, msg.sender, cid, price);
+        return id;
+    }
+
+    function buyModel(uint256 modelId) external payable nonReentrant {
+        require(models[modelId].exists, "model not found");
+        uint256 price = models[modelId].price;
+        require(msg.value >= price, "insufficient funds");
+
+        address payable seller = payable(models[modelId].uploader);
+        (bool sent, ) = seller.call{value: price}("");
+        require(sent, "transfer failed");
+
+        emit ModelPurchased(modelId, msg.sender, price);
+
+        if (msg.value > price) {
+            (bool refunded, ) = payable(msg.sender).call{value: msg.value - price}("");
+            require(refunded, "refund failed");
+        }
+    }
+
+    function updateModel(uint256 modelId, string memory newCid) external onlyUploader(modelId) {
+        require(models[modelId].exists, "model not found");
+        models[modelId].cid = newCid;
+        models[modelId].version += 1;
+        emit ModelUpdated(modelId, newCid, models[modelId].version);
+    }
+
+    function setFragmentManager(address newManager) external onlyOwner {
+        fragmentManager = IFragmentManager(newManager);
+    }
+
+    function withdraw(address payable to) external onlyOwner {
+        uint256 balance = address(this).balance;
+        require(balance > 0, "no balance");
+        (bool ok, ) = to.call{value: balance}("");
+        require(ok, "withdraw failed");
+    }
+}
