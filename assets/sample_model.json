@@ -1,0 +1,7 @@
+{
+  "name": "MyModel",
+  "version": "1.0.0",
+  "description": "Test AI model for VaultNet upload",
+  "architecture": "transformer",
+  "parameters": 1234567
+}
