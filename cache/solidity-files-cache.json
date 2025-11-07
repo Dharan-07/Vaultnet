@@ -756,8 +756,8 @@
       ]
     },
     "/home/smilly/my-hardhat-project/contracts/vaultnet.sol": {
-      "lastModificationDate": 1762072867573,
-      "contentHash": "5d3799c0fc9c82936e80f2af00da3a07",
+      "lastModificationDate": 1762486840494,
+      "contentHash": "386a902bfa0567c9ab649a47105f418a",
       "sourceName": "contracts/vaultnet.sol",
       "solcConfig": {
         "version": "0.8.20",
