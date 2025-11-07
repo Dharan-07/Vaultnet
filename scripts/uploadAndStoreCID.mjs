@@ -10,10 +10,10 @@ dotenv.config();
 
 // --- CONFIG ---
 const PINATA_API_KEY = process.env.PINATA_API_KEY;
-const PINATA_SECRET_API_KEY = process.env.PINATA_SECRET_API_KEY;
+const PINATA_SECRET_API_KEY = process.env.PINATA_API_SECRET;
 const PRIVATE_KEY = process.env.PRIVATE_KEY; // Wallet to send tx
 const CONTRACT_ADDRESS = process.env.CONTRACT_ADDRESS; // VaultNet deployed contract
-const ABI = JSON.parse(fs.readFileSync('./artifacts/contracts/VaultNet.sol/VaultNet.json')).abi;
+const ABI = JSON.parse(fs.readFileSync('./artifacts/contracts/vaultnet.sol/VaultNet.json')).abi;
 
 // --- ARGS ---
 const args = process.argv.slice(2);
@@ -25,7 +25,7 @@ if (args.length < 4) {
 const [filePath, name, description, price] = args;
 
 // --- INIT Pinata ---
-const pinata = pinataSDK(PINATA_API_KEY, PINATA_SECRET_API_KEY);
+const pinata = pinataSDK(PINATA_API_KEY, PINATA_API_SECRET);
 
 async function uploadToIPFS() {
     try {

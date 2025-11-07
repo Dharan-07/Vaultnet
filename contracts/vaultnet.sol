@@ -41,12 +41,29 @@ contract VaultNet is Ownable, ReentrancyGuard {
     }
 
     function uploadModel(string memory cid, uint256 price) external returns (uint256) {
-        modelCounter++;
-        uint256 id = modelCounter;
-        models[id] = Model({uploader: msg.sender, cid: cid, price: price, version: 1, exists: true});
-        emit ModelUploaded(id, msg.sender, cid, price);
-        return id;
+    modelCounter++;
+    uint256 id = modelCounter;
+    models[id] = Model({
+        uploader: msg.sender,
+        cid: cid,
+        price: price,
+        version: 1,
+        exists: true
+    });
+
+    emit ModelUploaded(id, msg.sender, cid, price);
+
+    // 🎁 Reward uploader with a fragment NFT
+    try fragmentManager.rewardFragment(msg.sender, cid) returns (uint256 tokenId) {
+        // optionally emit event for tracking
+        // emit FragmentRewarded(msg.sender, tokenId);
+    } catch {
+        // if reward mint fails, do not revert the upload
     }
+
+    return id;
+}
+
 
     function buyModel(uint256 modelId) external payable nonReentrant {
         require(models[modelId].exists, "model not found");
