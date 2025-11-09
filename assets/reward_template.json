@@ -1,0 +1,12 @@
+{
+  "name": "SpiderMan Reward Template",
+  "description": "A set of NFT fragments forming a complete Spider-Man artwork.",
+  "fragments": [
+    "https://gateway.pinata.cloud/ipfs/QmZzwbmeXswq8aZU6N4S6qK8KtbyNDueV1xqPxwLcQ3tAM",
+    "https://gateway.pinata.cloud/ipfs/QmTF2ZENEFkFxfLdKrMgPuhQiEDUCZhiRrpRPdint2NhmX",
+    "https://gateway.pinata.cloud/ipfs/QmVyntzTK4uRa6PTeeMudSTWDrdNHDvTVKDThgL98MjVxy",
+    "https://gateway.pinata.cloud/ipfs/QmYYUcrUSVgQJHS9KgijLEZtDco9LUqqPHiVQwMqqUaq5Y"
+  ],
+  "totalFragments": 4,
+  "createdAt": "2025-11-07T09:04:09.567Z"
+}
