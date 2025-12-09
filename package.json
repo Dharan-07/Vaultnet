@@ -17,6 +17,7 @@
   "dependencies": {
     "@pinata/sdk": "^1.2.1",
     "dotenv": "^17.2.3",
-    "open": "^10.2.0"
+    "open": "^10.2.0",
+    "react-router-dom": "^7.10.1"
   }
 }
