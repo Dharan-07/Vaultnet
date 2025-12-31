@@ -11,3 +11,13 @@ module.exports = {
     },
   },
 };
+
+require("hardhat-gas-reporter");
+module.exports = {
+  gasReporter:{
+    enabled: true,
+    currency: "USD", 
+    outputFile: "gas-report.txt",
+    json: true  
+  }
+};
